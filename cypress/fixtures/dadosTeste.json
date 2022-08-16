@@ -1,0 +1,26 @@
+[
+    {
+        "titulo": "Titulo Válido",
+        "data": "2022-10-15",
+        "tituloInvalido": "1",
+        "dataInvalida": "2022-02-31"
+    },
+    {
+        "titulo": "Titulo-Válido",
+        "data": "2022-12-25",
+        "tituloInvalido": "não",
+        "dataInvalida": "2022-02-31"
+    },
+    {
+        "titulo": "Titulo_Válido",
+        "data": "2023-01-01",
+        "tituloInvalido": "1234567",
+        "dataInvalida": "2022-02-31"
+    },
+    {
+        "titulo": "TituloVálido",
+        "data": "2022-09-20",
+        "tituloInvalido": " ",
+        "dataInvalida": "2022-02-31"
+    }
+]

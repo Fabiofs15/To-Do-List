@@ -1,118 +1,137 @@
 /// <reference types="cypress"/>
+const el = require('../support/elementos').ELEMENTS;
 let tamanhoAtualLista;
-let existe;
 let tarefaCadastrada;
-const dataValida = '2022-08-20';
-const dataInvalida = '2022-02-31';
-const tituloValido = '12345678';
 const tituloValido240 = Cypress._.repeat('1', 240);
-const mensagemAlertCadastrada = 'Tarefa cadastrada com sucesso'
-const mensagemAlertExcluida = 'Tarefa excluída com sucesso'
+const mensagemAlertCadastrada = 'Tarefa cadastrada com sucesso';
+const mensagemAlertExcluida = 'Tarefa excluída com sucesso';
 
-function validar($condicao){
-    cy.get('body').then(()=>{
-        if(existe){
-            cy.get('.sc-jSgvzq.HdxTx').then(() =>{
-                cy.get('.sc-jSgvzq.HdxTx').should('have.length', $condicao);
-            });
-        }
-    })
-}
-
-function escreveTitulo($titulo){
-    cy.get('[type="text"]')
-    .type($titulo)
-    .should('have.value', $titulo);
-}
-
-function escreveTituloEData($titulo, $data){
-    escreveTitulo($titulo);
-    cy.get('[type="date"]').type($data)
-}
-
-function criaAlert($mensagem){
-    cy.window().then((win) => {
-        win.window.alert($mensagem);
-       });
-}
-
-function validaAlert($mensagem){
-    cy.on('window:alert', (str)=>{
-        expect(str).to.be.equal($mensagem);
-    })
-}
-
-beforeEach(()=>{
-    cy.visit('http://localhost:3000');
-    cy.get('[type="text"]').type('user');
-    cy.get('[type="password"]').type('abcdefgh');
-    cy.get('button').click();
-    cy.wait(500);
+function existeLista(){
     cy.get('body').then($body=>{
-        if($body.find('.sc-jSgvzq.HdxTx').length){
-            existe = true;
-            cy.get('.sc-jSgvzq.HdxTx').then($lista =>{
+        if($body.find(el.listaDeTarefas).length){
+            cy.get(el.listaDeTarefas).then($lista =>{
                 tamanhoAtualLista = $lista.length;
                 tarefaCadastrada = tamanhoAtualLista + 1;
             });
-        }else if(cy.get('.sc-jSgvzq.HdxTx').should('not.exist')){
-            existe = false;
+        }else if(cy.get(el.listaDeTarefas).should('not.exist')){
+            tamanhoAtualLista = 0;
+            tarefaCadastrada = tamanhoAtualLista + 1;
         }
-    });
-    cy.get('.sc-dlfnuX').click();
+    }
+    );
+}
+
+function reverse($str){
+    return $str.split("-").reverse().join("-");
+}
+
+beforeEach(()=>{
+    /*
+    O usuario: user, senha: abcdefgh. Deve ser criado antes de executar os testes!
+    cy.criarUsuario();
+    */
+    cy.logar();
+    cy.wait(500);
+    existeLista();
+    cy.get(el.cadastrarNovaTarefa).click();
 })
 
 describe('Validação do titulo',()=>{
-    it('Titulo com 8 caracteres', ()=>{
-        escreveTitulo(tituloValido);
-        cy.get('form > button').click();
-        validar(tarefaCadastrada);
+    it('Titulo válido', ()=>{
+        cy.fixture('dadosTeste').then((dados)=>{
+            dados.forEach(dado=>{
+                cy.escreveTitulo(dado.titulo);
+                cy.get(el.cadastrar).click();
+                cy.validar(tarefaCadastrada);
+                cy.get(el.ultimaCadastradaTitulo).should('contain', dado.titulo);
+                cy.get(el.cadastrarNovaTarefa).click();
+                tarefaCadastrada++;
+            })
+        })
     })
     it('Titulo com 240 caracteres', ()=>{
-        escreveTitulo(tituloValido240);
-        cy.get('form > button').click();
-        validar(tarefaCadastrada);
+        cy.escreveTitulo(tituloValido240);
+        cy.get(el.cadastrar).click();
+        cy.validar(tarefaCadastrada);
+        cy.get(el.ultimaCadastradaTitulo).should('contain', tituloValido240);
     })
     it('Titulo menor de 8 caracteres', ()=>{
-        escreveTitulo('1');
-        cy.get('form > button').click();
-        validar(tamanhoAtualLista);
+        cy.fixture('dadosTeste').then((dados)=>{
+            dados.forEach(dado=>{
+                cy.escreveTitulo(dado.tituloInvalido);
+                cy.get(el.cadastrar).click();
+                cy.get(el.cadastrarNovaTarefa).click();
+            })
+        })
+        cy.validar(tamanhoAtualLista);
     })
 })
 
 describe('Validação de data', ()=>{
     it('Data válida', ()=>{
-        escreveTituloEData(tituloValido, dataValida);
-        cy.get('form > button').click();
-        validar(tarefaCadastrada);
+        cy.fixture('dadosTeste').then((dados)=>{
+            dados.forEach(dado=>{
+                cy.escreveTituloEData(dado.titulo, dado.data);
+                cy.get(el.cadastrar).click();
+                cy.validar(tarefaCadastrada);
+                cy.get(el.ultimaCadastradaTitulo).should('contain', dado.titulo);
+                cy.get(el.ultimaCadastradaData).should('contain', reverse(dado.data));
+                cy.get(el.cadastrarNovaTarefa).click();
+                tarefaCadastrada++;
+            })
+        })
     })
     it('Data inválida', ()=>{
-        escreveTituloEData(tituloValido, dataInvalida);
-        cy.get('form > button').click();
-        validar(tamanhoAtualLista);
+        cy.fixture('dadosTeste').then((dados)=>{
+            dados.forEach(dado=>{
+                cy.escreveTituloEData(dado.tituloInvalido, dado.dataInvalida);
+                cy.get(el.cadastrar).click();
+                cy.validar(tamanhoAtualLista);
+                cy.get(el.cadastrarNovaTarefa).click();
+            })
+        })
     })
 })
 
-describe.only('Validação alerta "Tarefa cadastrada com sucesso"', ()=>{
+describe('Validação alerta "Tarefa cadastrada com sucesso"', ()=>{
     it('Recebe alerta', ()=>{
-        escreveTituloEData(tituloValido, dataValida)
-        cy.get('form > button').click();
-        
-        //simulando alert
-        criaAlert(mensagemAlertCadastrada);
-        validaAlert(mensagemAlertCadastrada);
-        validar(tarefaCadastrada);
+        cy.fixture('dadosTeste').then((dado)=>{
+                cy.escreveTituloEData(dado[1].titulo, dado[1].data);
+                cy.get(el.cadastrar).click().then(()=>{
+                    cy.window().then(($win)=>{
+                        /*
+                        Trecho de código utilizado para reproduzir o alert
+                        cy.criaAlert(mensagemAlertCadastrada);
+                        */
+                        cy.stub($win, 'alert').as('alert') ;
+                    })
+                });
+                cy.validaAlert(mensagemAlertCadastrada);
+                cy.validar(tarefaCadastrada);
+                cy.get(el.ultimaCadastradaTitulo).should('contain', dado[1].titulo);
+                cy.get(el.ultimaCadastradaData).should('contain', reverse(dado[1].data));
+        })
     })
 })
 describe('Validação alerta "Tarefa excluída com sucesso"', ()=>{
     it('Recebe alerta', ()=>{
-        escreveTituloEData(tituloValido, dataValida);
-        cy.get('form > button').click();
-        validar(tarefaCadastrada);
-        cy.get(':nth-child(1) > .inner-task > .sc-iBPTik > .excluir').click();
-        //simulando alert
-        criaAlert(mensagemAlertExcluida);
-        validaAlert(mensagemAlertExcluida);
-        validar(tamanhoAtualLista);
+        cy.fixture('dadosTeste').then((dado)=>{
+                cy.escreveTituloEData(dado[1].titulo, dado[1].data);
+                cy.get(el.cadastrar).click();
+                cy.validar(tarefaCadastrada);
+                cy.get(el.ultimaCadastradaTitulo).should('contain', dado[1].titulo);
+                cy.get(el.ultimaCadastradaData).should('contain', reverse(dado[1].data));
+                cy.get(':nth-child(1) > .inner-task > .sc-iBPTik > .excluir').click().then(()=>{
+                    cy.window().then(($win)=>{
+                        /*
+                        Trecho de código utilizado para reproduzir o alert
+                        cy.criaAlert(mensagemAlertExcluida);
+                        */
+                        cy.stub($win, 'alert').as('alert') ;
+                    })
+                })
+                cy.validaAlert(mensagemAlertExcluida);
+                cy.validar(tamanhoAtualLista);
+        })
     })
 })
